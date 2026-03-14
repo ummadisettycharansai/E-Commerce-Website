@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Animated Banner -->
-![Banner](https://capsule-render.vercel.app/render?type=soft&color=0A1628&height=250&section=header&text=M%20ALL&fontSize=80&fontColor=C5A267&animation=fadeIn&subtext=Dress%20Sharp.%20Live%20Bold.&subtextGet=150)
+![Banner](https://capsule-render.vercel.app/render?type=soft&color=0A1628&height=250&section=header&text=M%20ALL&fontSize=80&fontColor=C5A267&animation=fadeIn&subtext=Dress%20Sharp.%20Live%20Bold.)
 
 <!-- Technology Badges -->
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black&style=for-the-badge)](https://reactjs.org/)
@@ -72,11 +72,10 @@ backend/
 ---
 
 ## 📸 Screenshots
-*(Include screenshots here)*
 
 <div align="center">
-  <img src="https://via.placeholder.com/800x450?text=Premium+Homepage+Hero" width="800" alt="Homepage">
-  <img src="https://via.placeholder.com/800x450?text=Product+Grid+and+Filters" width="800" alt="Listing">
+  <img src="screenshots/homepage.png" width="800" alt="Homepage">
+  <img src="screenshots/listing.png" width="800" alt="Listing">
 </div>
 
 ---
