@@ -1,278 +1,102 @@
-import { PrismaClient, Role, Size, Color, OrderStatus } from '@prisma/client';
+import { PrismaClient, Role, OrderStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('Seeding database with full demo data...');
 
-  // Categories
-  const categories = await Promise.all([
-    prisma.category.upsert({ where: { slug: 't-shirts' }, update: {}, create: { name: 'T-Shirts', slug: 't-shirts', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400' } }),
-    prisma.category.upsert({ where: { slug: 'shirts' }, update: {}, create: { name: 'Shirts', slug: 'shirts', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400' } }),
-    prisma.category.upsert({ where: { slug: 'jeans' }, update: {}, create: { name: 'Jeans', slug: 'jeans', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400' } }),
-    prisma.category.upsert({ where: { slug: 'shoes' }, update: {}, create: { name: 'Shoes', slug: 'shoes', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' } }),
-    prisma.category.upsert({ where: { slug: 'accessories' }, update: {}, create: { name: 'Accessories', slug: 'accessories', image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400' } }),
-  ]);
+  // 1. Clean up existing data (optional but recommended for clean seed)
+  // We'll use upsert instead to avoid breaking existing relations if any
 
-  const [tshirts, shirts, jeans, shoes, accessories] = categories;
+  // 2. Categories from mockData.js
+  const categoryNames = ["Shirts", "Trousers", "Jackets", "Formals", "Casuals", "Accessories"];
+  const categoryRecords = {};
 
-  // Admin user
+  for (const name of categoryNames) {
+    const slug = name.toLowerCase().replace(/ /g, '-');
+    const category = await prisma.category.upsert({
+      where: { slug },
+      update: {},
+      create: { 
+        name, 
+        slug, 
+        image: `https://placehold.co/400x400/0A1628/gold?text=${name}` 
+      }
+    });
+    categoryRecords[name] = category;
+  }
+
+  // 3. Admin user
   const adminPassword = await bcrypt.hash('Admin@123', 10);
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'admin@mensshop.com' },
     update: {},
-    create: { email: 'admin@mensshop.com', password: adminPassword, name: 'Admin User', role: Role.ADMIN },
+    create: { 
+      email: 'admin@mensshop.com', 
+      password: adminPassword, 
+      name: 'Admin User', 
+      role: Role.ADMIN 
+    },
   });
 
-  // Regular users
-  const userPassword = await bcrypt.hash('User@123', 10);
-  const users = await Promise.all([
-    prisma.user.upsert({ where: { email: 'john@example.com' }, update: {}, create: { email: 'john@example.com', password: userPassword, name: 'John Smith', phone: '+1234567890' } }),
-    prisma.user.upsert({ where: { email: 'mike@example.com' }, update: {}, create: { email: 'mike@example.com', password: userPassword, name: 'Mike Johnson', phone: '+1234567891' } }),
-    prisma.user.upsert({ where: { email: 'david@example.com' }, update: {}, create: { email: 'david@example.com', password: userPassword, name: 'David Brown', phone: '+1234567892' } }),
-    prisma.user.upsert({ where: { email: 'chris@example.com' }, update: {}, create: { email: 'chris@example.com', password: userPassword, name: 'Chris Wilson', phone: '+1234567893' } }),
-    prisma.user.upsert({ where: { email: 'alex@example.com' }, update: {}, create: { email: 'alex@example.com', password: userPassword, name: 'Alex Davis', phone: '+1234567894' } }),
-  ]);
-
-  // Products
-  const productData = [
-    // T-Shirts (6)
-    { 
-      name: 'Classic White Crew Neck Tee', 
-      slug: 'classic-white-crew-neck-tee', 
-      description: 'Premium cotton crew neck t-shirt, perfect for everyday wear.', 
-      price: 29.99, 
-      salePrice: null, 
-      originalPrice: 34.99,
-      discountPercent: 14,
-      images: ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'BasicWear', 
-      sizes: ['S', 'M', 'L', 'XL'], 
-      colors: ['White', 'Black', 'Grey'], 
-      fabric: '100% Cotton',
-      careInstructions: 'Machine wash cold.',
-      stock: 150, 
-      rating: 4.5, 
-      reviewCount: 89, 
-      isFeatured: true, 
-      isTrending: true,
-      inStock: true,
-      tags: ['basic', 'casual', 'cotton'] 
-    },
-    { 
-      name: 'Graphic Print Street Tee', 
-      slug: 'graphic-print-street-tee', 
-      description: 'Bold graphic print t-shirt for the urban streetwear look.', 
-      price: 39.99, 
-      salePrice: 29.99, 
-      originalPrice: 49.99,
-      discountPercent: 20,
-      images: ['https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'StreetStyle', 
-      sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], 
-      colors: ['Black', 'White', 'Navy'], 
-      fabric: 'Heavy Cotton',
-      careInstructions: 'Do not bleach.',
-      stock: 80, 
-      rating: 4.2, 
-      reviewCount: 45, 
-      isFeatured: false, 
-      isTrending: false,
-      inStock: true,
-      tags: ['graphic', 'streetwear'] 
-    },
-    { 
-      name: 'V-Neck Slim Fit Tee', 
-      slug: 'v-neck-slim-fit-tee', 
-      description: 'Slim fit v-neck t-shirt in soft jersey fabric.', 
-      price: 34.99, 
-      salePrice: null, 
-      originalPrice: 39.99,
-      discountPercent: 12,
-      images: ['https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'FitForm', 
-      sizes: ['S', 'M', 'L', 'XL'], 
-      colors: ['White', 'Navy', 'Grey', 'Black'], 
-      fabric: 'Luxury Jersey',
-      careInstructions: 'Iron on low.',
-      stock: 120, 
-      rating: 4.3, 
-      reviewCount: 67, 
-      isFeatured: true, 
-      isTrending: true,
-      inStock: true,
-      tags: ['slim', 'vneck'] 
-    },
-    { 
-      name: 'Polo Collar Tee', 
-      slug: 'polo-collar-tee', 
-      description: 'Classic polo collar t-shirt with button placket.', 
-      price: 44.99, 
-      salePrice: 34.99, 
-      originalPrice: 54.99,
-      discountPercent: 18,
-      images: ['https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'ClassicPolo', 
-      sizes: ['S', 'M', 'L', 'XL', 'XXL'], 
-      colors: ['White', 'Navy', 'Red', 'Green'], 
-      fabric: 'Pique Cotton',
-      careInstructions: 'Machine wash warm.',
-      stock: 95, 
-      rating: 4.6, 
-      reviewCount: 112, 
-      isFeatured: true, 
-      isTrending: false,
-      inStock: true,
-      tags: ['polo', 'classic'] 
-    },
-    { 
-      name: 'Oversized Drop Shoulder Tee', 
-      slug: 'oversized-drop-shoulder-tee', 
-      description: 'Trendy oversized drop shoulder t-shirt for a relaxed fit.', 
-      price: 49.99, 
-      salePrice: null, 
-      originalPrice: 59.99,
-      discountPercent: 16,
-      images: ['https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'UrbanFit', 
-      sizes: ['M', 'L', 'XL', 'XXL'], 
-      colors: ['Black', 'Beige', 'Olive'], 
-      fabric: 'French Terry',
-      careInstructions: 'Flat dry.',
-      stock: 60, 
-      rating: 4.4, 
-      reviewCount: 38, 
-      isFeatured: false, 
-      isTrending: true,
-      inStock: true,
-      tags: ['oversized', 'trendy'] 
-    },
-    { 
-      name: 'Striped Nautical Tee', 
-      slug: 'striped-nautical-tee', 
-      description: 'Classic nautical stripe pattern t-shirt in breathable cotton.', 
-      price: 32.99, 
-      salePrice: null, 
-      originalPrice: 39.99,
-      discountPercent: 17,
-      images: ['https://images.unsplash.com/photo-1562157873-818bc0726f68?w=600'], 
-      categoryId: tshirts.id, 
-      brand: 'MarineStyle', 
-      sizes: ['XS', 'S', 'M', 'L', 'XL'], 
-      colors: ['Navy', 'White'], 
-      fabric: 'Breathable Cotton',
-      careInstructions: 'Wash before use.',
-      stock: 75, 
-      rating: 4.1, 
-      reviewCount: 29, 
-      isFeatured: false, 
-      isTrending: false,
-      inStock: true,
-      tags: ['striped', 'nautical'] 
-    },
-    // Shirts (6)
-    { name: 'Oxford Button-Down Shirt', slug: 'oxford-button-down-shirt', description: 'Classic Oxford weave button-down shirt, versatile for work or weekend.', price: 69.99, salePrice: null, images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600'], categoryId: shirts.id, brand: 'OxfordCo', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.WHITE, Color.BLUE, Color.NAVY], stock: 100, rating: 4.7, reviewCount: 156, isFeatured: true, tags: ['oxford', 'formal', 'classic'] },
-    { name: 'Linen Summer Shirt', slug: 'linen-summer-shirt', description: 'Lightweight linen shirt perfect for warm weather.', price: 79.99, salePrice: 59.99, images: ['https://images.unsplash.com/photo-1607345366928-199ea26cfe3e?w=600'], categoryId: shirts.id, brand: 'LinenLife', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.WHITE, Color.BEIGE, Color.OLIVE], stock: 85, rating: 4.5, reviewCount: 78, isFeatured: true, tags: ['linen', 'summer', 'casual'] },
-    { name: 'Flannel Check Shirt', slug: 'flannel-check-shirt', description: 'Warm flannel check shirt for casual autumn looks.', price: 64.99, salePrice: null, images: ['https://images.unsplash.com/photo-1589310243389-96a5483213a8?w=600'], categoryId: shirts.id, brand: 'WoodlandWear', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.RED, Color.NAVY, Color.GREEN], stock: 70, rating: 4.3, reviewCount: 54, isFeatured: false, tags: ['flannel', 'check', 'casual'] },
-    { name: 'Slim Fit Dress Shirt', slug: 'slim-fit-dress-shirt', description: 'Tailored slim fit dress shirt for formal occasions.', price: 89.99, salePrice: 69.99, images: ['https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=600'], categoryId: shirts.id, brand: 'TailorMade', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.WHITE, Color.BLUE, Color.BLACK], stock: 90, rating: 4.8, reviewCount: 203, isFeatured: true, tags: ['formal', 'slim', 'dress'] },
-    { name: 'Denim Shirt', slug: 'denim-shirt', description: 'Classic denim shirt that pairs well with chinos or jeans.', price: 74.99, salePrice: null, images: ['https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600'], categoryId: shirts.id, brand: 'DenimCo', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.BLUE, Color.BLACK], stock: 65, rating: 4.4, reviewCount: 91, isFeatured: false, tags: ['denim', 'casual'] },
-    { name: 'Hawaiian Print Shirt', slug: 'hawaiian-print-shirt', description: 'Vibrant Hawaiian print shirt for vacation vibes.', price: 54.99, salePrice: 44.99, images: ['https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=600'], categoryId: shirts.id, brand: 'IslandStyle', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.BLUE, Color.GREEN, Color.RED], stock: 55, rating: 4.0, reviewCount: 33, isFeatured: false, tags: ['hawaiian', 'vacation', 'print'] },
-    // Jeans (6)
-    { name: 'Slim Fit Dark Wash Jeans', slug: 'slim-fit-dark-wash-jeans', description: 'Classic slim fit jeans in dark wash denim, versatile for any occasion.', price: 89.99, salePrice: null, images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?w=600'], categoryId: jeans.id, brand: 'DenimKing', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BLUE, Color.BLACK], stock: 110, rating: 4.6, reviewCount: 178, isFeatured: true, tags: ['slim', 'dark wash', 'denim'] },
-    { name: 'Relaxed Fit Straight Jeans', slug: 'relaxed-fit-straight-jeans', description: 'Comfortable relaxed fit straight leg jeans for everyday wear.', price: 79.99, salePrice: 64.99, images: ['https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=600'], categoryId: jeans.id, brand: 'ComfortDenim', sizes: [Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.BLUE, Color.GREY], stock: 95, rating: 4.4, reviewCount: 122, isFeatured: false, tags: ['relaxed', 'straight', 'comfortable'] },
-    { name: 'Skinny Ripped Jeans', slug: 'skinny-ripped-jeans', description: 'Trendy skinny jeans with distressed ripped details.', price: 94.99, salePrice: 74.99, images: ['https://images.unsplash.com/photo-1604176354204-9268737828e4?w=600'], categoryId: jeans.id, brand: 'StreetDenim', sizes: [Size.XS, Size.S, Size.M, Size.L], colors: [Color.BLUE, Color.BLACK], stock: 70, rating: 4.2, reviewCount: 87, isFeatured: true, tags: ['skinny', 'ripped', 'trendy'] },
-    { name: 'Cargo Denim Jeans', slug: 'cargo-denim-jeans', description: 'Utility-inspired cargo jeans with multiple pockets.', price: 99.99, salePrice: null, images: ['https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600'], categoryId: jeans.id, brand: 'UtilityWear', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.BLACK, Color.OLIVE], stock: 60, rating: 4.3, reviewCount: 56, isFeatured: false, tags: ['cargo', 'utility', 'pockets'] },
-    { name: 'Light Wash Bootcut Jeans', slug: 'light-wash-bootcut-jeans', description: 'Classic bootcut jeans in light wash for a retro look.', price: 84.99, salePrice: null, images: ['https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600'], categoryId: jeans.id, brand: 'RetroFit', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BLUE], stock: 50, rating: 4.1, reviewCount: 41, isFeatured: false, tags: ['bootcut', 'light wash', 'retro'] },
-    { name: 'Black Tapered Jeans', slug: 'black-tapered-jeans', description: 'Modern tapered fit black jeans for a sleek silhouette.', price: 94.99, salePrice: 79.99, images: ['https://images.unsplash.com/photo-1582552938357-32b906df40cb?w=600'], categoryId: jeans.id, brand: 'ModernFit', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BLACK], stock: 80, rating: 4.5, reviewCount: 99, isFeatured: true, tags: ['tapered', 'black', 'modern'] },
-    // Shoes (6)
-    { name: 'White Leather Sneakers', slug: 'white-leather-sneakers', description: 'Clean white leather sneakers, a timeless wardrobe staple.', price: 129.99, salePrice: null, images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600'], categoryId: shoes.id, brand: 'SneakerLab', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.WHITE], stock: 90, rating: 4.7, reviewCount: 234, isFeatured: true, tags: ['sneakers', 'white', 'leather'] },
-    { name: 'Chelsea Boots', slug: 'chelsea-boots', description: 'Sleek Chelsea boots in genuine leather with elastic side panels.', price: 189.99, salePrice: 149.99, images: ['https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=600'], categoryId: shoes.id, brand: 'BootMaster', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BLACK, Color.BROWN], stock: 65, rating: 4.8, reviewCount: 167, isFeatured: true, tags: ['boots', 'chelsea', 'leather'] },
-    { name: 'Running Athletic Shoes', slug: 'running-athletic-shoes', description: 'High-performance running shoes with cushioned sole.', price: 149.99, salePrice: 119.99, images: ['https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=600'], categoryId: shoes.id, brand: 'SpeedRun', sizes: [Size.S, Size.M, Size.L, Size.XL, Size.XXL], colors: [Color.BLACK, Color.WHITE, Color.BLUE], stock: 120, rating: 4.6, reviewCount: 312, isFeatured: true, tags: ['running', 'athletic', 'sport'] },
-    { name: 'Loafers Slip-On', slug: 'loafers-slip-on', description: 'Comfortable slip-on loafers in suede for smart casual looks.', price: 119.99, salePrice: null, images: ['https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=600'], categoryId: shoes.id, brand: 'ComfortStep', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BROWN, Color.BLACK, Color.NAVY], stock: 75, rating: 4.4, reviewCount: 89, isFeatured: false, tags: ['loafers', 'slip-on', 'suede'] },
-    { name: 'Desert Chukka Boots', slug: 'desert-chukka-boots', description: 'Casual chukka boots in suede, perfect for weekend outings.', price: 159.99, salePrice: 129.99, images: ['https://images.unsplash.com/photo-1605812860427-4024433a70fd?w=600'], categoryId: shoes.id, brand: 'DesertWalk', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BEIGE, Color.BROWN], stock: 55, rating: 4.5, reviewCount: 73, isFeatured: false, tags: ['chukka', 'desert', 'suede'] },
-    { name: 'Canvas Espadrilles', slug: 'canvas-espadrilles', description: 'Lightweight canvas espadrilles for summer casual wear.', price: 69.99, salePrice: null, images: ['https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=600'], categoryId: shoes.id, brand: 'SummerStep', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.NAVY, Color.WHITE, Color.BEIGE], stock: 85, rating: 4.2, reviewCount: 48, isFeatured: false, tags: ['espadrilles', 'canvas', 'summer'] },
-    // Accessories (6)
-    { name: 'Leather Bifold Wallet', slug: 'leather-bifold-wallet', description: 'Slim genuine leather bifold wallet with multiple card slots.', price: 49.99, salePrice: null, images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600'], categoryId: accessories.id, brand: 'LeatherCraft', sizes: [Size.M], colors: [Color.BLACK, Color.BROWN], stock: 200, rating: 4.6, reviewCount: 145, isFeatured: true, tags: ['wallet', 'leather', 'slim'] },
-    { name: 'Aviator Sunglasses', slug: 'aviator-sunglasses', description: 'Classic aviator sunglasses with UV400 protection.', price: 89.99, salePrice: 69.99, images: ['https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600'], categoryId: accessories.id, brand: 'SunShield', sizes: [Size.M], colors: [Color.BLACK, Color.BROWN], stock: 150, rating: 4.5, reviewCount: 98, isFeatured: true, tags: ['sunglasses', 'aviator', 'uv'] },
-    { name: 'Canvas Backpack', slug: 'canvas-backpack', description: 'Durable canvas backpack with laptop compartment.', price: 79.99, salePrice: null, images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600'], categoryId: accessories.id, brand: 'PackMaster', sizes: [Size.L], colors: [Color.BLACK, Color.NAVY, Color.OLIVE], stock: 80, rating: 4.4, reviewCount: 67, isFeatured: false, tags: ['backpack', 'canvas', 'laptop'] },
-    { name: 'Leather Belt', slug: 'leather-belt', description: 'Classic genuine leather belt with silver buckle.', price: 39.99, salePrice: null, images: ['https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=600'], categoryId: accessories.id, brand: 'BeltCo', sizes: [Size.S, Size.M, Size.L, Size.XL], colors: [Color.BLACK, Color.BROWN], stock: 180, rating: 4.7, reviewCount: 189, isFeatured: false, tags: ['belt', 'leather', 'classic'] },
-    { name: 'Wool Beanie Hat', slug: 'wool-beanie-hat', description: 'Warm wool blend beanie hat for cold weather.', price: 29.99, salePrice: 24.99, images: ['https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=600'], categoryId: accessories.id, brand: 'WarmHead', sizes: [Size.M], colors: [Color.BLACK, Color.GREY, Color.NAVY, Color.RED], stock: 120, rating: 4.3, reviewCount: 56, isFeatured: false, tags: ['beanie', 'wool', 'winter'] },
-    { name: 'Stainless Steel Watch', slug: 'stainless-steel-watch', description: 'Minimalist stainless steel watch with leather strap.', price: 199.99, salePrice: 159.99, images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'], categoryId: accessories.id, brand: 'TimeCraft', sizes: [Size.M], colors: [Color.BLACK, Color.BROWN], stock: 60, rating: 4.8, reviewCount: 223, isFeatured: true, tags: ['watch', 'steel', 'minimalist'] },
+  // 4. Products from mockData.js
+  const products = [
+    { id: "v1", name: "Classic Navy Oxford Shirt", brand: "M all", category: "Shirts", price: 1899, originalPrice: 2499, discountPercent: 24, sizes: ["S", "M", "L", "XL", "XXL"], colors: ["Navy", "White", "Light Blue"], fabric: "100% Premium Cotton", rating: 4.8, reviewCount: 124, images: ["https://placehold.co/600x800/0A1628/white?text=Navy+Oxford", "https://placehold.co/600x800/0A1628/gold?text=Detail+View"], description: "A timeless classic for the modern gentleman. Crafted from premium long-staple cotton for ultimate comfort and durability.", careInstructions: "Machine wash cold. Tumble dry low. Warm iron if needed.", inStock: true, isTrending: true },
+    { id: "v2", name: "Charcoal Slim Fit Chinos", brand: "M all", category: "Trousers", price: 2299, originalPrice: 2299, discountPercent: 0, sizes: ["30", "32", "34", "36"], colors: ["Charcoal", "Beige", "Black"], fabric: "Stretch Cotton Twill", rating: 4.6, reviewCount: 89, images: ["https://placehold.co/600x800/2D2D2D/white?text=Charcoal+Chinos", "https://placehold.co/600x800/2D2D2D/gold?text=Detail+View"], description: "Versatile chinos that transition perfectly from office to evening. Features a modern slim silhouette.", careInstructions: "Wash with similar colors inside out.", inStock: true, isTrending: true },
+    { id: "v3", name: "Urban Leather Biker Jacket", brand: "M all", category: "Jackets", price: 5499, originalPrice: 7999, discountPercent: 31, sizes: ["M", "L", "XL"], colors: ["Black", "Deep Brown"], fabric: "Genuine Leather", rating: 4.9, reviewCount: 56, images: ["https://placehold.co/600x800/111111/white?text=Leather+Jacket", "https://placehold.co/600x800/111111/gold?text=Biker+Detail"], description: "Make a statement with our signature leather biker jacket. Hand-finished for a vintage aesthetic.", careInstructions: "Professional leather clean only.", inStock: true, isTrending: false },
+    { id: "v4", name: "Golden Silk Tie", brand: "M all", category: "Accessories", price: 999, originalPrice: 1499, discountPercent: 33, sizes: ["One Size"], colors: ["Gold", "Navy"], fabric: "100% Pure Silk", rating: 4.7, reviewCount: 32, images: ["https://placehold.co/600x800/C9A84C/white?text=Silk+Tie", "https://placehold.co/600x800/C9A84C/navy?text=Tie+Close-up"], description: "Add a touch of regality to your formal attire with this hand-stitched silk tie.", careInstructions: "Dry clean only.", inStock: true, isTrending: false },
+    { id: "v5", name: "Midnight Suede Loafers", brand: "M all", category: "Casuals", price: 3499, originalPrice: 4500, discountPercent: 22, sizes: ["8", "9", "10", "11"], colors: ["Midnight Blue", "Tobacco"], fabric: "Italian Suede", rating: 4.5, reviewCount: 45, images: ["https://placehold.co/600x800/0A1628/white?text=Suede+Loafers", "https://placehold.co/600x800/0A1628/gold?text=Loafer+Texture"], description: "Unmatched comfort meet classic style. These loafers are a staple for any casual wardrobe.", careInstructions: "Use a brush for suede after wear.", inStock: true, isTrending: true },
+    { id: "v6", name: "Executive Wool Blazer", brand: "M all", category: "Formals", price: 6999, originalPrice: 8999, discountPercent: 22, sizes: ["38", "40", "42", "44"], colors: ["Grey Melange", "Navy"], fabric: "100% Merino Wool", rating: 4.9, reviewCount: 28, images: ["https://placehold.co/600x800/2D2D2D/white?text=Wool+Blazer", "https://placehold.co/600x800/2D2D2D/gold?text=Blazer+Fit"], description: "Command the room in this precision-tailored merino wool blazer.", careInstructions: "Dry clean only.", inStock: true, isTrending: true },
+    { id: "v7", name: "Essential White T-Shirt", brand: "M all", category: "Casuals", price: 799, originalPrice: 999, discountPercent: 20, sizes: ["XS", "S", "M", "L", "XL", "XXL"], colors: ["White", "Black", "Navy"], fabric: "Organic Heavyweight Cotton", rating: 4.8, reviewCount: 340, images: ["https://placehold.co/600x800/F5F5F0/0A1628?text=White+Tee", "https://placehold.co/600x800/F5F5F0/gold?text=Tee+Texture"], description: "The perfect heavyweight tee for everyday layering or standalone wear.", careInstructions: "Machine wash cold, tumble dry low.", inStock: true, isTrending: false },
+    { id: "v8", name: "Dark Wash Selvedge Jeans", brand: "M all", category: "Trousers", price: 3899, originalPrice: 4999, discountPercent: 22, sizes: ["30", "32", "34", "36"], colors: ["Indigo"], fabric: "14oz Selvedge Denim", rating: 4.7, reviewCount: 78, images: ["https://placehold.co/600x800/0A1628/white?text=Selvedge+Jeans", "https://placehold.co/600x800/0A1628/gold?text=Denim+Detail"], description: "Durable, high-quality denim that ages beautifully with time. A true wardrobe investment.", careInstructions: "Wash inside out. Avoid washing frequently to maintain color.", inStock: true, isTrending: false },
+    { id: "v9", name: "Quilted Winter Vest", brand: "M all", category: "Jackets", price: 2899, originalPrice: 3499, discountPercent: 17, sizes: ["S", "M", "L", "XL"], colors: ["Olive", "Navy"], fabric: "Recycled Polyester", rating: 4.6, reviewCount: 42, images: ["https://placehold.co/600x800/3A5F0B/white?text=Quilted+Vest", "https://placehold.co/600x800/3A5F0B/gold?text=Vest+Back"], description: "Lightweight yet warm quilted vest, perfect for transitional weather.", careInstructions: "Machine wash cold.", inStock: true, isTrending: false },
+    { id: "v10", name: "Premium Leather Belt", brand: "M all", category: "Accessories", price: 1299, originalPrice: 1599, discountPercent: 18, sizes: ["32", "34", "36", "38"], colors: ["Tan", "Black"], fabric: "Full Grain Leather", rating: 4.7, reviewCount: 56, images: ["https://placehold.co/600x800/8B4513/white?text=Leather+Belt", "https://placehold.co/600x800/8B4513/gold?text=Buckle+Detail"], description: "Hand-finished full grain leather belt with a solid brass buckle.", careInstructions: "Wipe with a damp cloth.", inStock: true, isTrending: false },
+    { id: "v11", name: "Minimalist Linen Shirt", brand: "M all", category: "Shirts", price: 2199, originalPrice: 2899, discountPercent: 24, sizes: ["S", "M", "L", "XL"], colors: ["Sand", "Sky Blue"], fabric: "Pure European Linen", rating: 4.8, reviewCount: 88, images: ["https://placehold.co/600x800/E3DAC9/0A1628?text=Linen+Shirt", "https://placehold.co/600x800/E3DAC9/gold?text=Linen+Texture"], description: "The ultimate summer shirt. Breathable, crisp, and effortlessly stylish.", careInstructions: "Wash with cool water. Hang dry.", inStock: true, isTrending: true },
+    { id: "v12", name: "Tailored Dress Trousers", brand: "M all", category: "Formals", price: 3299, originalPrice: 3999, discountPercent: 17, sizes: ["30", "32", "34", "36", "38"], colors: ["Navy", "Charcoal"], fabric: "Wool Blend", rating: 4.9, reviewCount: 35, images: ["https://placehold.co/600x800/0A1628/white?text=Dress+Trousers", "https://placehold.co/600x800/0A1628/gold?text=Fit+Detail"], description: "Sharp and sophisticated. These trousers are the foundation of any power suit.", careInstructions: "Dry clean recommended.", inStock: true, isTrending: false },
+    { id: "v13", name: "Heavyweight Denim Shirt", brand: "M all", category: "Shirts", price: 2499, originalPrice: 3200, discountPercent: 22, sizes: ["S", "M", "L", "XL"], colors: ["Indigo", "Light Wash"], fabric: "12oz Premium Denim", rating: 4.7, reviewCount: 45, images: ["https://placehold.co/600x800/0A1628/white?text=Denim+Shirt", "https://placehold.co/600x800/0A1628/gold?text=Denim+Detail"], description: "A rugged yet refined denim shirt built for layering or wearing on its own.", careInstructions: "Wash inside out with cold water.", inStock: true, isTrending: false },
+    { id: "v14", name: "Grandad Collar Linen Shirt", brand: "M all", category: "Shirts", price: 2199, originalPrice: 2199, discountPercent: 0, sizes: ["S", "M", "L", "XL"], colors: ["White", "Sand", "Olive"], fabric: "100% European Linen", rating: 4.8, reviewCount: 32, images: ["https://placehold.co/600x800/F5F5F0/0A1628?text=Grandad+Shirt", "https://placehold.co/600x800/F5F5F0/gold?text=Collar+Detail"], description: "Sophisticated collarless design in breathable linen for a relaxed summer aesthetic.", careInstructions: "Hand wash or gentle cycle.", inStock: true, isTrending: true },
+    { id: "v15", name: "Midnight Check Flannel", brand: "M all", category: "Shirts", price: 1699, originalPrice: 2200, discountPercent: 23, sizes: ["M", "L", "XL", "XXL"], colors: ["Navy/Red", "Grey/Black"], fabric: "Brushed Cotton Flannel", rating: 4.6, reviewCount: 78, images: ["https://placehold.co/600x800/2D2D2D/white?text=Flannel+Shirt", "https://placehold.co/600x800/2D2D2D/gold?text=Check+Detail"], description: "Ultra-soft brushed flannel in a classic checked pattern. Perfect for cooler days.", careInstructions: "Machine wash cold. Do not bleach.", inStock: true, isTrending: false },
+    { id: "v16", name: "Printed Tropical Summer Shirt", brand: "M all", category: "Shirts", price: 1499, originalPrice: 1999, discountPercent: 25, sizes: ["S", "M", "L"], colors: ["Navy Print", "Teal Print"], fabric: "Rayon Viscose", rating: 4.4, reviewCount: 56, images: ["https://placehold.co/600x800/008080/white?text=Tropical+Shirt", "https://placehold.co/600x800/008080/gold?text=Print+Close-up"], description: "Breezy rayon shirt with a hand-designed tropical print. Vacation ready.", careInstructions: "Cold hand wash. Cool iron.", inStock: true, isTrending: true },
+    { id: "v17", name: "Slim Fit Cargo Pants", brand: "M all", category: "Trousers", price: 2699, originalPrice: 3499, discountPercent: 23, sizes: ["30", "32", "34", "36"], colors: ["Olive", "Black", "Khaki"], fabric: "Cotton Ripstop", rating: 4.7, reviewCount: 112, images: ["https://placehold.co/600x800/3A5F0B/white?text=Cargo+Pants", "https://placehold.co/600x800/3A5F0B/gold?text=Pocket+Detail"], description: "Utilitarian design meets a modern slim silhouette. Crafted from durable ripstop cotton.", careInstructions: "Wash with similar colors.", inStock: true, isTrending: true },
+    { id: "v18", name: "Relaxed Linen Trousers", brand: "M all", category: "Trousers", price: 2899, originalPrice: 2899, discountPercent: 0, sizes: ["30", "32", "34", "36"], colors: ["Sand", "White"], fabric: "Linen Viscose Blend", rating: 4.5, reviewCount: 64, images: ["https://placehold.co/600x800/E3DAC9/0A1628?text=Linen+Trousers", "https://placehold.co/600x800/E3DAC9/gold?text=Drawstring+Detail"], description: "Loose, comfortable fit with a drawstring waist. The ultimate summer trouser.", careInstructions: "Gentle machine wash.", inStock: true, isTrending: false },
+    { id: "v19", name: "Urban Tech Joggers", brand: "M all", category: "Trousers", price: 1999, originalPrice: 2599, discountPercent: 23, sizes: ["S", "M", "L", "XL"], colors: ["Black", "Charcoal"], fabric: "Water-Resistant Nylon", rating: 4.8, reviewCount: 156, images: ["https://placehold.co/600x800/111111/white?text=Tech+Joggers", "https://placehold.co/600x800/111111/gold?text=Cuff+Detail"], description: "Modern techwear aesthetic with water-resistant fabric and ergonomic seaming.", careInstructions: "Machine wash cold. Do not iron.", inStock: true, isTrending: true },
+    { id: "v20", name: "Vintage Corduroy Trousers", brand: "M all", category: "Trousers", price: 2499, originalPrice: 3800, discountPercent: 34, sizes: ["30", "32", "34", "36"], colors: ["Tan", "Burgundy"], fabric: "8-Wale Cotton Corduroy", rating: 4.6, reviewCount: 42, images: ["https://placehold.co/600x800/8B4513/white?text=Cord+Trousers", "https://placehold.co/600x800/8B4513/gold?text=Texture+Detail"], description: "Classic corduroy with a rich texture and a slightly tapered modern fit.", careInstructions: "Wash inside out to protect pile.", inStock: true, isTrending: false },
+    { id: "v21", name: "Classic Harrington Jacket", brand: "M all", category: "Jackets", price: 3999, originalPrice: 4999, discountPercent: 20, sizes: ["M", "L", "XL"], colors: ["Navy", "Beige"], fabric: "Cotton Gabardine", rating: 4.9, reviewCount: 38, images: ["https://placehold.co/600x800/0A1628/white?text=Harrington+Jacket", "https://placehold.co/600x800/0A1628/gold?text=Lining+Detail"], description: "The timeless transitional jacket featuring the iconic Fraser tartan lining.", careInstructions: "Dry clean only.", inStock: true, isTrending: true },
+    { id: "v22", name: "Tech Bomber Jacket", brand: "M all", category: "Jackets", price: 4499, originalPrice: 4499, discountPercent: 0, sizes: ["S", "M", "L", "XL"], colors: ["Sage", "Black"], fabric: "Flight Grade Nylon", rating: 4.7, reviewCount: 82, images: ["https://placehold.co/600x800/4B5320/white?text=Bomber+Jacket", "https://placehold.co/600x800/4B5320/gold?text=Zipper+Detail"], description: "Modern take on the MA-1 flight jacket with a slim fit and utility arm pocket.", careInstructions: "Machine wash on delicate.", inStock: true, isTrending: false },
+    { id: "v23", name: "Double-Breasted Overcoat", brand: "M all", category: "Jackets", price: 8999, originalPrice: 12000, discountPercent: 25, sizes: ["38", "40", "42", "44"], colors: ["Camel", "Navy"], fabric: "Wool Cashmere Blend", rating: 5.0, reviewCount: 15, images: ["https://placehold.co/600x800/C19A6B/white?text=Overcoat", "https://placehold.co/600x800/C19A6B/0A1628?text=Lapel+Detail"], description: "The peak of winter luxury. Tailored for a commanding presence.", careInstructions: "Professional dry clean only.", inStock: true, isTrending: true },
+    { id: "v24", name: "Distressed Denim Trucker", brand: "M all", category: "Jackets", price: 3299, originalPrice: 3999, discountPercent: 17, sizes: ["S", "M", "L", "XL"], colors: ["Light Blue"], fabric: "Rigid Selvedge Denim", rating: 4.6, reviewCount: 124, images: ["https://placehold.co/600x800/ADD8E6/white?text=Denim+Trucker", "https://placehold.co/600x800/ADD8E6/gold?text=Wash+Detail"], description: "Classic Type III trucker jacket with authentic distancing and metallic hardware.", careInstructions: "Cold wash only. Hang dry.", inStock: true, isTrending: false },
+    { id: "v25", name: "Three-Piece Midnight Suit", brand: "M all", category: "Formals", price: 14999, originalPrice: 18999, discountPercent: 21, sizes: ["38R", "40R", "42R"], colors: ["Midnight Navy"], fabric: "Super 120s Wool", rating: 4.9, reviewCount: 22, images: ["https://placehold.co/600x800/0A1628/white?text=3-Piece+Suit", "https://placehold.co/600x800/0A1628/gold?text=Waistcoat+Detail"], description: "Exquisite three-piece suit including jacket, trousers, and matching waistcoat.", careInstructions: "Professional dry clean only.", inStock: true, isTrending: true },
+    { id: "v26", name: "Silk Pocket Square Pair", brand: "M all", category: "Formals", price: 799, originalPrice: 999, discountPercent: 20, sizes: ["One Size"], colors: ["Gold/Navy", "White/Silver"], fabric: "100% Habotai Silk", rating: 4.8, reviewCount: 45, images: ["https://placehold.co/600x800/C9A84C/white?text=Pocket+Squares", "https://placehold.co/600x800/C9A84C/navy?text=Fabric+Texture"], description: "Add a final flourish to your tailoring with these hand-rolled silk pocket squares.", careInstructions: "Dry clean only.", inStock: true, isTrending: false },
+    { id: "v27", name: "Wing-Collar Tuxedo Shirt", brand: "M all", category: "Formals", price: 2899, originalPrice: 3499, discountPercent: 17, sizes: ["S", "M", "L", "XL"], colors: ["White"], fabric: "Egyptian Giza Cotton", rating: 4.7, reviewCount: 18, images: ["https://placehold.co/600x800/FFFFFF/navy?text=Tuxedo+Shirt", "https://placehold.co/600x800/FFFFFF/gold?text=Bib+Detail"], description: "Formal wing-collar shirt featuring a pleated bib and French cuffs.", careInstructions: "Professional launder and press.", inStock: true, isTrending: false },
+    { id: "v28", name: "Gunmetal Cufflinks Set", brand: "M all", category: "Formals", price: 1899, originalPrice: 2499, discountPercent: 24, sizes: ["30", "32", "34", "36"], colors: ["Gunmetal", "Silver"], fabric: "Polished Stainless Steel", rating: 4.8, reviewCount: 31, images: ["https://placehold.co/600x800/2D2D2D/white?text=Cufflinks", "https://placehold.co/600x800/2D2D2D/gold?text=Engraving+Detail"], description: "Minimalist geometric cufflinks for the modern executive.", careInstructions: "Wipe with soft cloth.", inStock: true, isTrending: false },
+    { id: "v29", name: "Oversized Boxy Hoodie", brand: "M all", category: "Casuals", price: 2499, originalPrice: 2499, discountPercent: 0, sizes: ["S", "M", "L", "XL"], colors: ["Heather Grey", "Black", "Brown"], fabric: "Heavyweight Loopback Cotton", rating: 4.9, reviewCount: 214, images: ["https://placehold.co/600x800/808080/white?text=Boxy+Hoodie", "https://placehold.co/600x800/808080/gold?text=Fit+View"], description: "Relaxed, boxy fit hoodie with a heavy drape for the ultimate streetwear look.", careInstructions: "Wash inside out. Do not tumble dry.", inStock: true, isTrending: true },
+    { id: "v30", name: "Premium Slub Graphic Tee", brand: "M all", category: "Casuals", price: 1199, originalPrice: 1599, discountPercent: 25, sizes: ["S", "M", "L", "XL", "XXL"], colors: ["Vintage White", "Faded Black"], fabric: "Slub Cotton", rating: 4.7, reviewCount: 56, images: ["https://placehold.co/600x800/F5F5F0/0A1628?text=Graphic+Tee", "https://placehold.co/600x800/F5F5F0/gold?text=Print+Detail"], description: "Distressed logo print on a high-texture slub cotton base.", careInstructions: "Machine wash cold.", inStock: true, isTrending: false },
+    { id: "v31", name: "Classic Pique Polo", brand: "M all", category: "Casuals", price: 1599, originalPrice: 1999, discountPercent: 20, sizes: ["M", "L", "XL"], colors: ["Navy", "White", "Burgundy"], fabric: "Honeycomb Pique Cotton", rating: 4.6, reviewCount: 142, images: ["https://placehold.co/600x800/0A1628/white?text=Pique+Polo", "https://placehold.co/600x800/0A1628/gold?text=Logo+Detail"], description: "The essential smart-casual polo. Durable, breathable, and timeless.", careInstructions: "Avoid using fabric softeners.", inStock: true, isTrending: false },
+    { id: "v32", name: "Minimalist Canvas Sneakers", brand: "M all", category: "Casuals", price: 2299, originalPrice: 2299, discountPercent: 0, sizes: ["7", "8", "9", "10", "11"], colors: ["Off-White", "Navy"], fabric: "12oz Organic Canvas", rating: 4.5, reviewCount: 89, images: ["https://placehold.co/600x800/F5F5F0/0A1628?text=Sneakers", "https://placehold.co/600x800/F5F5F0/gold?text=Sole+Detail"], description: "Clean silhouettes and premium canvas. Built for daily comfort.", careInstructions: "Spot clean with mild soap.", inStock: true, isTrending: true },
+    { id: "v33", name: "Chronograph Steel Watch", brand: "M all", category: "Accessories", price: 7499, originalPrice: 9999, discountPercent: 25, sizes: ["One Size"], colors: ["Silver/Navy", "Gold/Black"], fabric: "Stainless Steel / Sapphire Glass", rating: 4.9, reviewCount: 24, images: ["https://placehold.co/600x800/2D2D2D/white?text=Steel+Watch", "https://placehold.co/600x800/2D2D2D/gold?text=Dial+Close-up"], description: "Precision timekeeping meet modern industrial design.", careInstructions: "Wipe with dry microfiber cloth.", inStock: true, isTrending: true },
+    { id: "v34", name: "Bi-Fold Saffiano Wallet", brand: "M all", category: "Accessories", price: 1999, originalPrice: 2499, discountPercent: 20, sizes: ["One Size"], colors: ["Black", "Nero"], fabric: "Saffiano Grain Leather", rating: 4.8, reviewCount: 67, images: ["https://placehold.co/600x800/111111/white?text=Leather+Wallet", "https://placehold.co/600x800/111111/gold?text=Interior+Slots"], description: "Scratch-resistant saffiano leather with RFID protection.", careInstructions: "Avoid contact with water.", inStock: true, isTrending: false },
+    { id: "v35", name: "Aviator Blue-Light Glasses", brand: "M all", category: "Accessories", price: 1299, originalPrice: 1899, discountPercent: 31, sizes: ["One Size"], colors: ["Gunmetal", "Gold"], fabric: "Acetate / Metal Alloy", rating: 4.7, reviewCount: 88, images: ["https://placehold.co/600x800/2D2D2D/white?text=Aviators", "https://placehold.co/600x800/2D2D2D/gold?text=Side+View"], description: "Classic aviator frames with modern blue-light filtering lenses.", careInstructions: "Wash with luke-warm water.", inStock: true, isTrending: false },
+    { id: "v36", name: "Cashmere Blend Scarf", brand: "M all", category: "Accessories", price: 2299, originalPrice: 2899, discountPercent: 20, sizes: ["One Size"], colors: ["Camel", "Grey", "Navy"], fabric: "Wool Cashmere Blend", rating: 4.9, reviewCount: 42, images: ["https://placehold.co/600x800/C19A6B/white?text=Winter+Scarf", "https://placehold.co/C19A6B/gold?text=Knit+Detail"], description: "Luxuriously soft and warm. A sophisticated addition to your winter layering.", careInstructions: "Dry clean only.", inStock: true, isTrending: false }
   ];
 
-  const products = [];
-  for (const p of productData) {
-    const product = await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: {},
-      create: p,
-    });
-    products.push(product);
-  }
-
-  // Addresses for users
-  const addresses = await Promise.all(
-    users.map((user, i) =>
-      prisma.address.create({
-        data: {
-          userId: user.id,
-          line1: `${100 + i} Main Street`,
-          city: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][i],
-          state: ['NY', 'CA', 'IL', 'TX', 'AZ'][i],
-          zip: ['10001', '90001', '60601', '77001', '85001'][i],
-          country: 'US',
-          isDefault: true,
-        },
-      })
-    )
-  );
-
-  // Orders with items
-  for (let i = 0; i < users.length; i++) {
-    const order = await prisma.order.create({
-      data: {
-        userId: users[i].id,
-        addressId: addresses[i].id,
-        status: [OrderStatus.DELIVERED, OrderStatus.SHIPPED, OrderStatus.CONFIRMED, OrderStatus.PENDING, OrderStatus.DELIVERED][i],
-        total: products[i].price + products[i + 5].price,
-        stripePayId: `pi_test_${Math.random().toString(36).substr(2, 9)}`,
-        items: {
-          create: [
-            { productId: products[i].id, quantity: 1, size: 'M', color: 'BLACK', price: products[i].price },
-            { productId: products[i + 5].id, quantity: 2, size: 'L', color: 'NAVY', price: products[i + 5].price },
-          ],
-        },
+  for (const p of products) {
+    const { category, id: _tempId, ...productData } = p;
+    await prisma.product.upsert({
+      where: { slug: p.name.toLowerCase().replace(/ /g, '-') },
+      update: {
+        ...productData,
+        categoryId: categoryRecords[category].id,
+      },
+      create: {
+        ...productData,
+        slug: p.name.toLowerCase().replace(/ /g, '-'),
+        categoryId: categoryRecords[category].id,
       },
     });
   }
 
-  // Reviews
-  for (let i = 0; i < users.length; i++) {
-    await prisma.review.create({
-      data: {
-        userId: users[i].id,
-        productId: products[i].id,
-        rating: [5, 4, 5, 3, 4][i],
-        comment: [
-          'Excellent quality! Fits perfectly and the material is very comfortable.',
-          'Great product, fast shipping. Would definitely buy again.',
-          'Love the design and the fit. Highly recommend!',
-          'Good quality but runs a bit small. Order a size up.',
-          'Perfect for everyday wear. Very happy with this purchase.',
-        ][i],
-      },
-    });
-  }
-
-  console.log('Seeding complete!');
-  console.log('Admin: admin@mensshop.com / Admin@123');
-  console.log('Users: john@example.com / User@123 (and others)');
+  console.log('Full Seeding complete! 36 products added.');
 }
 
 main()
