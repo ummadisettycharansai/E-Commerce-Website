@@ -9,7 +9,16 @@ export const getProducts = async (req: Request, res: Response) => {
   const { category, brand, size, color, minPrice, maxPrice, sort, search, page = '1', limit = '12', featured } = req.query as any;
 
   const where: any = { isActive: true };
-  if (category) where.category = { slug: category };
+  if (category) {
+    // Handle both hyphens and spaces in the category slug/name
+    const categorySlug = category.toLowerCase().replace(/ /g, '-');
+    where.category = { 
+      slug: { 
+        equals: categorySlug, 
+        mode: 'insensitive' 
+      } 
+    };
+  }
   if (brand) where.brand = { in: brand.split(',') };
   if (size) where.sizes = { hasSome: size.split(',') };
   if (color) where.colors = { hasSome: color.split(',') };
