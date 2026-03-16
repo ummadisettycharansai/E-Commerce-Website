@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -26,25 +26,26 @@ model Product {
   id          String         @id @default(cuid())
   name        String
   slug        String         @unique
-  description String         @db.NVarChar(Max)
+  description String   @db.Text
   price       Float
   salePrice   Float?
-  images      String         @db.NVarChar(Max)
+  images      String   @db.Text
   categoryId  String
-  category    Category       @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   brand       String
   sizes       String
   colors      String
-  stock       Int            @default(0)
-  rating      Float          @default(0)
-  reviewCount Int            @default(0)
-  isFeatured  Boolean        @default(false)
-  isActive    Boolean        @default(true)
-  tags        String         @db.NVarChar(Max)
+  stock       Int      @default(0)
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  isFeatured  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  tags        String   @db.Text
   orderItems  OrderItem[]
   reviews     Review[]
   wishlist    WishlistItem[]
-  createdAt   DateTime       @default(now())
+  cart        CartItem[]
+  createdAt   DateTime @default(now())
 }
 
 model Category {
@@ -99,6 +100,7 @@ model CartItem {
   userId    String
   user      User   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quantity  Int
   size      String
   color     String
@@ -122,7 +124,7 @@ model Review {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rating    Int
-  comment   String   @db.NVarChar(Max)
+  comment   String @db.Text
   createdAt DateTime @default(now())
 }
 
