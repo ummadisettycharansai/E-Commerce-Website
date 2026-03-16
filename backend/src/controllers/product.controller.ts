@@ -75,6 +75,11 @@ export const uploadImages = async (req: Request, res: Response) => {
     })
   );
 
-  await prisma.product.update({ where: { id: req.params.id }, data: { images: { push: urls } } });
+  // Since images is now a native String[] in PostgreSQL, we can use the push operator
+  await prisma.product.update({
+    where: { id: req.params.id },
+    data: { images: { push: urls } },
+  });
+
   res.json({ urls });
 };
