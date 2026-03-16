@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useParams } from 'react-router-dom';
 import { Filter, ChevronDown, Star, Heart, ShoppingBag, X, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PRODUCTS, CATEGORIES, COLORS, SIZES } from '../data/mockData';
@@ -8,6 +8,7 @@ import { useWishlist } from '../context/WishlistContext';
 
 const Listing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { category: routeCategory } = useParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
@@ -18,7 +19,7 @@ const Listing = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   // Filters from URL
-  const activeCategory = searchParams.get('category');
+  const activeCategory = routeCategory || searchParams.get('category');
   const activeColor = searchParams.get('color');
   const activePriceRange = searchParams.get('price');
 
@@ -35,7 +36,8 @@ const Listing = () => {
     }
 
     if (activeCategory) {
-      result = result.filter(p => p.category === activeCategory);
+      const lowerActive = activeCategory.toLowerCase();
+      result = result.filter(p => p.category.toLowerCase() === lowerActive);
     }
     if (activeColor) {
       result = result.filter(p => p.colors.includes(activeColor));

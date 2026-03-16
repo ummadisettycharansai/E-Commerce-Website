@@ -24,8 +24,8 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Shop All', path: '/shop' },
-    { name: 'Casuals', path: '/shop?category=Casuals' },
-    { name: 'Formals', path: '/shop?category=Formals' },
+    { name: 'Casuals', path: '/shop/Casuals' },
+    { name: 'Formals', path: '/shop/Formals' },
   ];
 
   return (
@@ -204,6 +204,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/shop" element={<Listing />} />
+                <Route path="/shop/:category" element={<Listing />} />
                 <Route path="/product/:id" element={<Detail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
